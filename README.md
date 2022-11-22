@@ -36,7 +36,7 @@
 
 
 2. CQRS
-딜리버리가 시작 되면 딜리버리 상태가 업데이트 되고 View Model을 통해 확인 할 수 있다.
+ - 딜리버리가 시작 되면 딜리버리 상태가 업데이트 되고 View Model을 통해 확인 할 수 있다.
 ```
     @StreamListener(KafkaProcessor.INPUT)
     public void whenDeliveryStarted_then_update(@Payload DeliveryStarted deliveryStarted) {
@@ -56,7 +56,7 @@
 ```
 
 3. Compensation / Correlation
-주문이 취소 되면 해당 food 의 수량을 복원 한다.
+ - 주문이 취소 되면 해당 food 의 수량을 복원 한다.
 ```
     @StreamListener(value = KafkaProcessor.INPUT, condition = "headers['type']=='OrderCancelled'")
     public void wheneverOrderCancelled_IncreaseStock(@Payload OrderCancelled orderCancelled) {
@@ -74,7 +74,7 @@
 ```
 
 4. Request / Response
-조리가 완료 되어 배달목록이 추가 될때 주문 정보를 원격 호출 하여 정보를 저장 한다.
+- 조리가 완료 되어 배달목록이 추가 될때 주문 정보를 원격 호출 하여 정보를 저장 한다.
 ```
     @StreamListener(value=KafkaProcessor.INPUT, condition="headers['type']=='Cooked'")
     public void wheneverCooked_DeliveryListAdd(@Payload Cooked cooked){
@@ -100,9 +100,9 @@
     }
 ```
 5. Circuit Breaker
-주문 시 재고량이 초과 한 경우 오류를 표출 하는 코드를 추가
-해당 서비스에 성능을 딜래이 발생 코드 추가
-설정 파일에 임계치 설정 추가 
+ - 주문 시 재고량이 초과 한 경우 오류를 표출 하는 코드를 추가
+ - 해당 서비스에 성능을 딜래이 발생 코드 추가
+ - 설정 파일에 임계치 설정 추가 
 ```
     @PrePersist
     public void onPrePersist() {
