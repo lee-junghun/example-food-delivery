@@ -1,3 +1,28 @@
+![image](https://user-images.githubusercontent.com/109713893/203225758-737c7834-e2d1-4d77-9bc0-bc511364f638.png)
+
+
+
+1. Pub / Sub
+   - 조리 완료 시 배달 목록에 주문 정보가 추가 된다.
+```
+    @StreamListener(value=KafkaProcessor.INPUT, condition="headers['type']=='Cooked'")
+    public void wheneverCooked_DeliveryListAdd(@Payload Cooked cooked){
+
+        Cooked event = cooked;
+        System.out.println("\n\n##### listener DeliveryListAdd : " + cooked + "\n\n");
+
+        orderService.getOrder(cooked.getOrderId());
+        Delivery.deliveryListAdd(event);
+
+    }
+```
+
+
+2. CQRS
+
+
+
+
 ![image](https://user-images.githubusercontent.com/487999/79708354-29074a80-82fa-11ea-80df-0db3962fb453.png)
 
 # 예제 - 음식배달
