@@ -1,4 +1,4 @@
-![image](https://user-images.githubusercontent.com/109713893/203225758-737c7834-e2d1-4d77-9bc0-bc511364f638.png)
+![image](https://user-images.githubusercontent.com/109713893/203236168-a9408c54-c12a-4119-b6ca-db5930b7b098.png)
 
 
 
@@ -37,10 +37,25 @@
         }
     }
 ```
+
 3. Compensation / Correlation
+주문이 취소 되면 해당 food 의 수량을 복원 한다.
+```
+    @StreamListener(value = KafkaProcessor.INPUT, condition = "headers['type']=='OrderCancelled'")
+    public void wheneverOrderCancelled_IncreaseStock(@Payload OrderCancelled orderCancelled) {
+        OrderCancelled event = orderCancelled;
+        Stock.increaseStock(event);
+    }
+    
+    
+    public static void increaseStock(OrderCancelled orderCancelled) {
+        stockRepository().findById(Long.valueOf(orderCancelled.getFoodId())).ifPresent(stock->{
+            stock.setStock(stock.getStock()++);
+            stockRepository().save(stock);
+        });
+    }
 ```
 
-```
 4. Request / Response
 조리가 완료 되어 배달목록이 추가 될때 주문 정보를 원격 호출 하여 정보를 저장 한다.
 ```
@@ -68,8 +83,13 @@
     }
 ```
 5. Circuit Breaker
+주문 시 재고량이 초과 한 경우 오류를 표출 
 ```
-
+    @PrePersist
+    public void onPrePersist() {
+        Stock stock = ShopApplication.applicationContext.getBean(Stock.class).getStock(Long.valueOf(getFoodId()));
+        if(stock.getCount() < getFoodQty()) throw new RuntimeException("Out of Stock!");
+    }
 ```
 6. Gateway / Pipeline
 ```
