@@ -1,5 +1,18 @@
-![image](https://user-images.githubusercontent.com/109713893/203236168-a9408c54-c12a-4119-b6ca-db5930b7b098.png)
+![image](https://user-images.githubusercontent.com/109713893/203244704-091dbc85-5108-4bcf-874a-ae7bdb9dba1c.png)
 
+
+
+기능적 요구사항
+1. 고객이 메뉴를 선택하여 주문한다
+1. 고객이 결제한다
+1. 주문이 되면 주문 내역이 입점상점주인에게 전달된다
+1. [상점주인이 주문을 수락 하고, 요리가 완료 되면 배달 목록에 주문 정보가 추가 된다.]
+1. [배달 목록에서 주문을 선택 하여 배달 수락 하면 배달이 시작된다.]
+1. [배달이 완료 되면 알림을 보낸다.]
+1. 고객이 주문을 취소할 수 있다
+1. 배달이 시작되면 주문을 취소 할 수 없다.
+1. 고객이 주문상태를 중간중간 조회한다
+1. 주문상태가 바뀔 때 마다 카톡으로 알림을 보낸다
 
 
 1. Pub / Sub
@@ -83,16 +96,93 @@
     }
 ```
 5. Circuit Breaker
-주문 시 재고량이 초과 한 경우 오류를 표출 
+주문 시 재고량이 초과 한 경우 오류를 표출 하는 코드를 추가
+해당 서비스에 성능을 딜래이 발생 코드 추가
+설정 파일에 임계치 설정 추가 
 ```
     @PrePersist
     public void onPrePersist() {
         Stock stock = ShopApplication.applicationContext.getBean(Stock.class).getStock(Long.valueOf(getFoodId()));
         if(stock.getCount() < getFoodQty()) throw new RuntimeException("Out of Stock!");
     }
+    
+    @PostLoad
+    public void makeDelay(){
+        try {
+            Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 ```
-6. Gateway / Pipeline
+
+
 ```
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 600
+```
+
+6. Gateway / Ingress
+Gateway 설정
+```
+  cloud:
+    gateway:
+      routes:
+        - id: frontend
+          uri: http://localhost:8081
+          predicates:
+            - Path=/orders/**, /payments/**, 
+        - id: shop
+          uri: http://localhost:8082
+          predicates:
+            - Path=/storeOrders/**, 
+        - id: delivery
+          uri: http://localhost:8083
+          predicates:
+            - Path=/deliveries/**, 
+```
+
+```
+apiVersion: networking.k8s.io/v1
+kind: "Ingress"
+metadata: 
+  name: "shopping-ingress"
+  annotations: 
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec: 
+  ingressClassName: nginx
+  rules: 
+    - host: ""
+      http: 
+        paths: 
+          - path: /orders
+            pathType: Prefix
+            backend: 
+              service:
+                name: orders
+                port:
+                  number: 8080
+          - path: /deliveries
+            pathType: Prefix
+            backend: 
+              service:
+                name: delivery
+                port:
+                  number: 8080
+          - path: /payments
+            pathType: Prefix
+            backend: 
+              service:
+                name: payment
+                port:
+                  number: 8080
 ```
 
 
