@@ -19,8 +19,61 @@
 
 
 2. CQRS
+딜리버리가 시작 되면 딜리버리 상태가 업데이트 되고 View Model을 통해 확인 할 수 있다.
+```
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenDeliveryStarted_then_update(@Payload DeliveryStarted deliveryStarted) {
+        try {
+            if (!deliveryStarted.validate()) return;
+            Optional<Order> optionalOrder = orderRepository.findById(deliveryStarted.getId());
 
+            if( order.isPresent()) {
+                Order order = optionalOrder.get();
+                order.setDeliveryStatus("Started");
+                orderRepository.save(order);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+```
+3. Compensation / Correlation
+```
 
+```
+4. Request / Response
+조리가 완료 되어 배달목록이 추가 될때 주문 정보를 원격 호출 하여 정보를 저장 한다.
+```
+    @StreamListener(value=KafkaProcessor.INPUT, condition="headers['type']=='Cooked'")
+    public void wheneverCooked_DeliveryListAdd(@Payload Cooked cooked){
+        Order order = orderService.getOrder(cooked.getOrderId());
+        Delivery.deliveryListAdd(order);
+    }
+    
+    
+    @RequestMapping(value = "/orders/{id}",
+            method = RequestMethod.PUT,
+            produces = "application/json;charset=UTF-8")
+    public Order getOrder(@PathVariable(value = "id") Long id, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Order order = orderRepository.findById(id).get();
+        return order;
+    }
+    
+    
+    public static void deliveryListAdd(Order order) {
+        Delivery delivery = new Delivery();
+        delivery.setAddress(order.getAddress());
+        delivery.setOrderId(order.getId());
+        repository().save(delivery);
+    }
+```
+5. Circuit Breaker
+```
+
+```
+6. Gateway / Pipeline
+```
+```
 
 
 ![image](https://user-images.githubusercontent.com/487999/79708354-29074a80-82fa-11ea-80df-0db3962fb453.png)
